@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "10FF Auto-Type ID",
+  "version": "1.20.0",
+  "description": "Auto-typing helper for 10fastfingers Indonesian test.",
+  "permissions": ["activeTab", "scripting", "storage", "debugger"],
+  "host_permissions": ["*://10fastfingers.com/*", "*://*.10fastfingers.com/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "10FF Auto-Type"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://10fastfingers.com/*", "*://*.10fastfingers.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "toggle-typing": {
+      "suggested_key": {
+        "default": "Alt+T",
+        "mac": "Alt+T"
+      },
+      "description": "Start/Stop auto-type"
+    }
+  }
+}
