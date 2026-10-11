@@ -1,72 +1,90 @@
-# 10FF Auto-Type ID
+<div align="center">
 
-A Chrome / Edge (Manifest V3) extension that automates typing on the 10FastFingers Indonesian typing test:
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&pause=1000&color=27AE60&center=true&vCenter=true&width=600&lines=10FF+Auto-Type+ID;Exact+verify.+No+skips.;Floor+pacing%2C+never+below+setting." alt="10FF Auto-Type ID" />
 
-`https://10fastfingers.com/id/typing-test/indonesian`
+<p>Chrome / Edge (Manifest V3) extension that automates typing on the 10FastFingers Indonesian typing test.</p>
 
-It drives the site's own input pipeline — synthetic keystrokes, per-character verification, and word-commit detection — with a trusted debugger fallback for pages that reject synthetic events.
+![version](https://img.shields.io/badge/version-1.20.0-27ae60?style=flat-square)
+![engine](https://img.shields.io/badge/engine-v28.0-2c3e50?style=flat-square)
+![manifest](https://img.shields.io/badge/manifest-V3-0969da?style=flat-square)
+![browser](https://img.shields.io/badge/Chrome_%2F_Edge-supported-e67e22?style=flat-square)
 
-> **Note:** a yellow *“is debugging this browser”* banner is expected while typing. It is shown by Chrome whenever the `debugger` permission is active and disappears on stop.
+</div>
+
+> A yellow "is debugging this browser" banner is normal while typing. Chrome shows it whenever the `debugger` permission is active, and it disappears on stop.
+
+## Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Usage](#usage)
+- [How it works](#how-it-works)
+- [Project structure](#project-structure)
+- [Configuration](#configuration)
+- [Troubleshooting](#troubleshooting)
+- [Development](#development)
+- [Version](#version)
 
 ## Features
 
-- One-click start/stop via floating button, popup, or `Alt+T` shortcut
-- Adjustable pace: 40–200 WPM (default 80), persisted in `chrome.storage`
-- Dual input pipeline:
-  - Primary: `insertText` + companion `keydown` / `keypress` / `keyup`
-  - Fallback: `chrome.debugger` (`Input.insertText` + `Input.dispatchKeyEvent`)
-- Exact-match verification per character — no blind length checks
-- Commit-verified word submit (a word counts only when the page clears the box)
-- Automatic retry (3x per character) and resync on rejected words — no word skipping
-- Safe word-list refill with 2-word sequence anchoring for row scrolls and page turns
-- Closed-loop pacing so measured WPM never drops below the configured floor
-- Live progress display (`wN/9999` + live WPM) on the button, popup, and tooltip
-- Autoplay on page load once the word box is ready, plus a keep-alive watchdog
+- Start and stop from the floating button, the popup, or `Alt+T`
+- Pace control from 40 to 200 WPM (default 80), saved in `chrome.storage`
+- Two input paths. Primary is `insertText` with companion key events. Fallback is `chrome.debugger` for pages that reject synthetic events
+- Per character check against the expected buffer, so wrong characters are caught instead of counted by length
+- Word submit counts only when the page clears the box. A submit that does not clear within about 1s is wiped and the same word is retried, never skipped
+- Retry up to 3x per character, with resync on rejected words
+- Word list refill anchored on 2 word sequences, so row scrolls and page turns do not shift the cursor
+- Pacing floor keeps measured WPM at or above the configured value
+- Live progress (`wN/9999` plus live WPM) on the button, the popup, and the tooltip
+- Autoplay once the word box is ready, plus a watchdog that restarts a wedged loop
 
 ## Requirements
 
-- Google Chrome or Microsoft Edge (Manifest V3 support)
+- Google Chrome or Microsoft Edge with Manifest V3 support
 - Access to `10fastfingers.com`
-- Closed DevTools on the test tab (Chrome blocks `debugger` attach while DevTools is open)
+- DevTools closed on the test tab. Chrome refuses `debugger` attach while DevTools is open
 
 ## Installation
 
-1. Open `chrome://extensions`.
-2. Enable **Developer mode**.
-3. Click **Load unpacked** and select this folder.
-4. Open the Indonesian typing test page and hard-reload (`Ctrl+Shift+R`).
-5. Confirm the console prints `[10FF] content v28.0 loaded`.
+1. Open `chrome://extensions`
+2. Enable **Developer mode**
+3. Click **Load unpacked** and select this folder
+4. Open the Indonesian typing test page and hard reload (`Ctrl+Shift+R`)
+5. Confirm the console prints `[10FF] content v28.0 loaded`
 
 ## Usage
 
 | Method | Action |
 |---|---|
-| Floating button (bottom-right) | ▶ Type / ■ Stop |
-| Extension popup | WPM slider + Start / Stop |
-| Keyboard | `Alt+T` toggles typing (test tab only) |
+| Floating button, bottom right | Type / Stop |
+| Extension popup | WPM slider plus Start / Stop |
+| Keyboard | `Alt+T` toggles typing on the test tab |
 
-1. Close DevTools on the test tab.
-2. Click **▶ Type** (or press `Alt+T`).
-3. The button turns red (`■ N/9999 <live>wpm`) while typing.
-4. Click again or press `Alt+T` to stop. The debugger detaches automatically.
+1. Close DevTools on the test tab
+2. Click **Type** (or press `Alt+T`)
+3. The button turns red and shows progress while typing
+4. Click again (or press `Alt+T`) to stop. The debugger detaches by itself
 
-Orange button states are hard verdicts — e.g. `No word-box`, `No textarea`, `Textarea locked`, `Blocked wN/total [mode]`, `Close DevTools!`.
+An orange button means a hard stop with a reason shown on the button, for example `No word-box`, `No textarea`, `Textarea locked`, `Blocked wN/total [mode]`, or `Close DevTools!`.
 
-## How It Works
+## How it works
 
-- `content.js` — all typing logic: word-box parsing, input focus management, exact-content verification (`boxExp`), commit-verified submit, safe refill, and floor pacing.
-- `background.js` — service worker relaying `chrome.debugger` (`attach`, `Input.dispatchKeyEvent`, `Input.insertText`, `Input.dispatchMouseEvent`, `detach`) plus the `Alt+T` → `TOGGLE` command.
-- `popup.html` / `popup.js` — WPM slider, Start/Stop button, progress label, and content-script state sync.
-- `manifest.json` — MV3 wiring: `activeTab`, `scripting`, `storage`, `debugger` permissions, `document_idle` content script, and the `toggle-typing` command.
+| File | Role |
+|---|---|
+| `content.js` | Typing engine. Parses the word box, manages focus, verifies each character (`boxExp`), confirms every word submit, refills the word list safely, and paces keystrokes |
+| `background.js` | Service worker relay for `chrome.debugger` (attach, key events, text insert, mouse click, detach) and the `Alt+T` toggle |
+| `popup.html` / `popup.js` | WPM slider, Start / Stop button, progress label, state sync with the content script |
+| `manifest.json` | MV3 wiring. Permissions `activeTab`, `scripting`, `storage`, `debugger`. Content script at `document_idle`. Command `toggle-typing` |
 
-Word commits are acknowledged by the page clearing the input box. A submit that does not clear within ~1s is treated as rejected: the box is wiped and the same word is retried from scratch.
+The page acknowledges a submitted word by clearing the input box. No clear means no accept, so the engine wipes the box and retypes the same word from the first character.
 
-## Project Structure
+## Project structure
 
 ```text
 .
 ├── manifest.json   # MV3 manifest, permissions, commands
-├── content.js      # Typing engine (injected into 10fastfingers)
+├── content.js      # Typing engine injected into 10fastfingers
 ├── background.js   # Debugger relay service worker
 ├── popup.html      # Popup UI
 ├── popup.js        # Popup logic
@@ -77,22 +95,65 @@ Word commits are acknowledged by the page clearing the input box. A submit that 
 
 | Setting | Range | Default | Stored in |
 |---|---|---|---|
-| WPM | 40–200 | 80 | `chrome.storage.local` |
+| WPM | 40-200 | 80 | `chrome.storage.local` |
 
-WPM changes apply live via the popup slider and take effect on the next keystroke gap.
+Slider changes apply live and take effect on the next keystroke gap.
 
 ## Troubleshooting
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| `Reload halaman lalu coba lagi` in popup | Content script not loaded yet | Hard-reload the test tab, then reload the extension |
-| `Close DevTools!` | DevTools blocks debugger attach | Close DevTools on the test tab and restart |
-| `No word-box` / `No words (N)` | Word list not rendered yet | Wait for the page to finish loading, then start |
-| `Textarea locked` / `Click ignored` | Input not focusable (banner overlay) | Click the test box once, then start again |
-| `Blocked wN/total [exec]` | Debugger denied, synthetic path rejected | Run `await __ff10.probeDbg()` and report the `error` field |
-| Old version in console | Stale content script | Reload extension → close DevTools → `Ctrl+Shift+R` |
+<details>
+<summary>Popup says "Reload halaman lalu coba lagi"</summary>
 
-Console hooks (on the test tab): `__ff10.state()`, `__ff10.diag()`, `__ff10.probe()`, `await __ff10.probeDbg()`.
+The content script is not loaded yet. Hard reload the test tab, then reload the extension.
+
+</details>
+
+<details>
+<summary>Button shows "Close DevTools!"</summary>
+
+DevTools blocks debugger attach. Close DevTools on the test tab and start again.
+
+</details>
+
+<details>
+<summary>Button shows "No word-box" or "No words (N)"</summary>
+
+The word list has not rendered yet. Wait for the page to finish loading, then start.
+
+</details>
+
+<details>
+<summary>Button shows "Textarea locked" or "Click ignored"</summary>
+
+The input is not focusable, usually because a banner overlays it. Click the test box once, then start again.
+
+</details>
+
+<details>
+<summary>Button shows "Blocked wN/total [exec]"</summary>
+
+The debugger was denied and the synthetic path was rejected. Run `await __ff10.probeDbg()` in the tab console and report the `error` field.
+
+</details>
+
+<details>
+<summary>Console shows an old version</summary>
+
+A stale content script is cached. Reload the extension, close DevTools, then `Ctrl+Shift+R`.
+
+</details>
+
+<details>
+<summary>Console hooks (run on the test tab)</summary>
+
+```js
+__ff10.state()            // typing, wpm, cursor, mode, live wpm
+__ff10.diag()             // trace, boxExp, stuck, refillMiss, focus state
+__ff10.probe()            // synthetic insert check on a scratch textarea
+await __ff10.probeDbg()   // fresh debugger attach verdict, nothing left attached
+```
+
+</details>
 
 ## Development
 
@@ -103,9 +164,9 @@ node --check popup.js
 python -c "import json; json.load(open('manifest.json')); print('manifest OK')"
 ```
 
-Internal regression harnesses and version history are documented in `handoff.md`.
+Regression harnesses and version history live in `handoff.md`.
 
 ## Version
 
-- Extension: `1.20.0` (`manifest.json`)
-- Typing engine: `v28.0` (`content.js`)
+- Extension `1.20.0` (`manifest.json`)
+- Typing engine `v28.0` (`content.js`)
